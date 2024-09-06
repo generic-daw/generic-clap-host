@@ -1,0 +1,15 @@
+[package]
+name = "generic-clap-host"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+clack-extensions = { git = "https://github.com/prokopyl/clack.git", features = [
+    "clack-host",
+    "gui",
+] }
+clack-host = { git = "https://github.com/prokopyl/clack.git" }
+dirs = "5.0.1"
+walkdir = "2.5.0"
+winit = "0.30.5"
