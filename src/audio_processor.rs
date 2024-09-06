@@ -5,13 +5,18 @@ use crate::host::Host;
 
 pub struct AudioProcessor {
     started_audio_processor: Option<StartedPluginAudioProcessor<Host>>,
+    config: PluginAudioConfiguration,
     steady_time: AtomicU64,
 }
 
 impl AudioProcessor {
-    pub(crate) const fn new(audio_processor: StartedPluginAudioProcessor<Host>) -> Self {
+    pub(crate) const fn new(
+        audio_processor: StartedPluginAudioProcessor<Host>,
+        config: PluginAudioConfiguration,
+    ) -> Self {
         Self {
             started_audio_processor: Some(audio_processor),
+            config,
             steady_time: AtomicU64::new(0),
         }
     }
@@ -28,6 +33,12 @@ impl AudioProcessor {
         output_ports: &mut AudioPorts,
     ) -> ([Vec<f32>; 2], EventBuffer) {
         assert_eq!(input_audio_buffers[0].len(), input_audio_buffers[1].len());
+        assert!(
+            input_audio_buffers[0].len() < usize::try_from(self.config.max_frames_count).unwrap()
+        );
+        assert!(
+            input_audio_buffers[0].len() > usize::try_from(self.config.min_frames_count).unwrap()
+        );
 
         let mut output_audio_buffers = input_audio_buffers.clone();
 
@@ -41,7 +52,9 @@ impl AudioProcessor {
         let mut output_audio = output_ports.with_output_buffers([AudioPortBuffer {
             latency: 0,
             channels: AudioPortBufferType::f32_output_only(
-                output_audio_buffers.iter_mut().map(std::vec::Vec::as_mut_slice),
+                output_audio_buffers
+                    .iter_mut()
+                    .map(std::vec::Vec::as_mut_slice),
             ),
         }]);
 
@@ -63,19 +76,19 @@ impl AudioProcessor {
             .unwrap();
 
         self.steady_time
-            .fetch_add(u64::from(output_audio.frames_count().unwrap_or(0)), SeqCst);
+            .fetch_add(u64::from(output_audio.frames_count().unwrap()), SeqCst);
 
         (output_audio_buffers, output_events_buffer)
     }
 
     pub fn restart(&mut self) {
-        let mut stopped_audio_processor = None;
-        std::mem::swap(
-            &mut self.started_audio_processor,
-            &mut stopped_audio_processor,
+        self.started_audio_processor = Some(
+            std::mem::take(&mut self.started_audio_processor)
+                .unwrap()
+                .stop_processing()
+                .start_processing()
+                .unwrap(),
         );
-        let stopped_audio_processor = stopped_audio_processor.unwrap().stop_processing();
         self.steady_time.store(0, SeqCst);
-        self.started_audio_processor = Some(stopped_audio_processor.start_processing().unwrap());
     }
 }

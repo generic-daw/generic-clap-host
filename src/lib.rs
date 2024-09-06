@@ -118,14 +118,14 @@ pub fn run(
                 instance,
                 &sender_host,
                 receiver_plugin,
-                &mut AudioProcessor::new(audio_processor),
+                &mut AudioProcessor::new(audio_processor, config),
             );
         } else {
             gui.run_gui_embedded(
                 instance,
                 &sender_host,
                 receiver_plugin,
-                &mut AudioProcessor::new(audio_processor),
+                &mut AudioProcessor::new(audio_processor, config),
             );
         }
     });
