@@ -6,6 +6,7 @@ mod shared;
 
 use audio_processor::AudioProcessor;
 use clack_host::prelude::*;
+use etcetera::{choose_base_strategy, BaseStrategy};
 use extensions::gui::Gui;
 use host::{Host, HostThreadMessage};
 use main_thread::{MainThread, MainThreadMessage};
@@ -43,15 +44,15 @@ pub fn get_installed_plugins() -> Vec<PluginBundle> {
 }
 
 fn standard_clap_paths() -> Vec<PathBuf> {
+    let strategy = choose_base_strategy().unwrap();
+
     let mut paths = vec![];
 
-    if let Some(home_dir) = dirs::home_dir() {
-        paths.push(home_dir.join(".clap"));
+    paths.push(strategy.home_dir().join(".clap"));
 
-        #[cfg(target_os = "macos")]
-        {
-            paths.push(home_dir.join("Library/Audio/Plug-Ins/CLAP"));
-        }
+    #[cfg(target_os = "macos")]
+    {
+        paths.push(strategy.home_dir().join("Library/Audio/Plug-Ins/CLAP"));
     }
 
     #[cfg(windows)]
@@ -60,9 +61,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
             paths.push(PathBuf::from(val).join("CLAP"));
         }
 
-        if let Some(dir) = dirs::config_local_dir() {
-            paths.push(dir.join("Programs\\Common\\CLAP"));
-        }
+        paths.push(strategy.config_dir().join("Programs\\Common\\CLAP"));
     }
 
     #[cfg(target_os = "macos")]
