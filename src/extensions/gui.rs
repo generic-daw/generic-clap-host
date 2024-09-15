@@ -159,15 +159,15 @@ impl Gui {
                 }
                 MainThreadMessage::ProcessAudio(
                     mut input_buffers,
-                    input_audio_ports,
-                    output_audio_ports,
+                    mut input_audio_ports,
+                    mut output_audio_ports,
                     input_events,
                 ) => {
                     let (output_buffers, output_events) = audio_processor.process(
                         &mut input_buffers,
                         &input_events,
-                        &mut input_audio_ports.write().unwrap(),
-                        &mut output_audio_ports.write().unwrap(),
+                        &mut input_audio_ports,
+                        &mut output_audio_ports,
                     );
 
                     sender

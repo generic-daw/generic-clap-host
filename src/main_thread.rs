@@ -1,5 +1,3 @@
-use std::sync::{Arc, RwLock};
-
 use clack_extensions::gui::{GuiSize, PluginGui};
 use clack_host::prelude::*;
 
@@ -7,12 +5,7 @@ pub enum MainThreadMessage {
     RunOnMainThread,
     GuiClosed,
     GuiRequestResized(GuiSize),
-    ProcessAudio(
-        [Vec<f32>; 2],
-        Arc<RwLock<AudioPorts>>,
-        Arc<RwLock<AudioPorts>>,
-        EventBuffer,
-    ),
+    ProcessAudio([Vec<f32>; 2], AudioPorts, AudioPorts, EventBuffer),
     GetCounter,
 }
 
