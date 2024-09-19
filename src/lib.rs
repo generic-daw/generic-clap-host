@@ -7,7 +7,7 @@ mod shared;
 use audio_processor::AudioProcessor;
 use clack_host::prelude::*;
 use etcetera::{choose_base_strategy, BaseStrategy};
-use extensions::gui::Gui;
+use extensions::gui::GuiExt;
 use host::{Host, HostThreadMessage};
 use main_thread::{MainThread, MainThreadMessage};
 use shared::Shared;
@@ -18,6 +18,7 @@ use std::{
 };
 use walkdir::WalkDir;
 
+#[must_use]
 pub fn get_installed_plugins() -> Vec<PluginBundle> {
     standard_clap_paths()
         .iter()
@@ -81,6 +82,10 @@ fn standard_clap_paths() -> Vec<PathBuf> {
     paths
 }
 
+/// # Panics
+///
+/// panics if the plugin doesn't expose a `PluginFactory`
+#[must_use]
 pub fn run(
     bundle: PluginBundle,
     config: PluginAudioConfiguration,
@@ -109,7 +114,7 @@ pub fn run(
 
         let mut gui = instance
             .access_handler(|h| h.gui)
-            .map(|gui| Gui::new(gui, &mut instance.plugin_handle()))
+            .map(|gui| GuiExt::new(gui, &mut instance.plugin_handle()))
             .unwrap();
 
         if gui.needs_floating().unwrap() {

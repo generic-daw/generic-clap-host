@@ -52,9 +52,7 @@ impl AudioProcessor {
         let mut output_audio = output_ports.with_output_buffers([AudioPortBuffer {
             latency: 0,
             channels: AudioPortBufferType::f32_output_only(
-                output_audio_buffers
-                    .iter_mut()
-                    .map(std::vec::Vec::as_mut_slice),
+                output_audio_buffers.iter_mut().map(Vec::as_mut_slice),
             ),
         }]);
 
@@ -81,6 +79,9 @@ impl AudioProcessor {
         (output_audio_buffers, output_events_buffer)
     }
 
+    /// # Panics
+    ///
+    /// panics if the underlying plugin's implementation fails for any reason
     pub fn restart(&mut self) {
         self.started_audio_processor = Some(
             std::mem::take(&mut self.started_audio_processor)

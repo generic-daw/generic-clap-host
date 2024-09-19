@@ -4,15 +4,15 @@ use clack_host::prelude::*;
 use std::sync::mpsc::{Receiver, Sender};
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
 
-pub struct Gui {
+pub struct GuiExt {
     plugin_gui: PluginGui,
     pub configuration: Option<GuiConfiguration<'static>>,
     is_open: bool,
     is_resizeable: bool,
 }
 
-impl Gui {
-    pub fn new(plugin_gui: PluginGui, instance: &mut PluginMainThreadHandle) -> Self {
+impl GuiExt {
+    pub fn new(plugin_gui: PluginGui, instance: &mut PluginMainThreadHandle<'_>) -> Self {
         Self {
             plugin_gui,
             configuration: Self::negotiate_configuration(&plugin_gui, instance),
@@ -23,7 +23,7 @@ impl Gui {
 
     fn negotiate_configuration(
         gui: &PluginGui,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle<'_>,
     ) -> Option<GuiConfiguration<'static>> {
         let api_type = GuiApiType::default_for_current_platform()?;
         let mut config = GuiConfiguration {
@@ -68,7 +68,7 @@ impl Gui {
             .map(|GuiConfiguration { is_floating, .. }| is_floating)
     }
 
-    pub fn open_floating(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+    pub fn open_floating(&self, plugin: &mut PluginMainThreadHandle<'_>) -> Result<(), GuiError> {
         let Some(configuration) = self.configuration else {
             panic!("Called open_floating on incompatible plugin")
         };
@@ -86,7 +86,7 @@ impl Gui {
 
     pub fn resize(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle<'_>,
         size: Size,
         scale_factor: f64,
     ) -> Size {
@@ -118,13 +118,14 @@ impl Gui {
         self.gui_size_to_winit_size(working_size)
     }
 
-    pub fn destroy(&mut self, plugin: &mut PluginMainThreadHandle) {
+    pub fn destroy(&mut self, plugin: &mut PluginMainThreadHandle<'_>) {
         if self.is_open {
             self.plugin_gui.destroy(plugin);
             self.is_open = false;
         }
     }
 
+    #[expect(clippy::needless_pass_by_value, clippy::needless_pass_by_ref_mut)]
     pub fn run_gui_embedded(
         &mut self,
         mut _instance: PluginInstance<Host>,

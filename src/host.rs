@@ -14,7 +14,7 @@ impl HostHandlers for Host {
     type MainThread<'a> = MainThread<'a>;
     type AudioProcessor<'a> = ();
 
-    fn declare_extensions(builder: &mut HostExtensions<Self>, _shared: &Self::Shared<'_>) {
+    fn declare_extensions(builder: &mut HostExtensions<'_, Self>, _shared: &Self::Shared<'_>) {
         builder.register::<HostGui>();
     }
 }
