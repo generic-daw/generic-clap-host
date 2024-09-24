@@ -4,6 +4,7 @@ use clack_host::prelude::*;
 
 pub(crate) struct Host;
 
+#[derive(Debug)]
 pub enum HostThreadMessage {
     AudioProcessed([Vec<f32>; 2], EventBuffer),
     Counter(u64),

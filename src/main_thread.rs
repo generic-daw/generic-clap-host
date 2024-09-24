@@ -1,6 +1,7 @@
 use clack_extensions::gui::{GuiSize, PluginGui};
 use clack_host::prelude::*;
 
+#[expect(missing_debug_implementations)]
 pub enum MainThreadMessage {
     RunOnMainThread,
     GuiClosed,

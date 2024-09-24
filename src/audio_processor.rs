@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 
 use crate::host::Host;
 
+#[expect(missing_debug_implementations)]
 pub struct AudioProcessor {
     started_audio_processor: Option<StartedPluginAudioProcessor<Host>>,
     config: PluginAudioConfiguration,
