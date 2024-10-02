@@ -7,7 +7,6 @@ mod shared;
 use audio_processor::AudioProcessor;
 use clack_host::prelude::*;
 use etcetera::{choose_base_strategy, BaseStrategy};
-use extensions::gui::GuiExt;
 use host::{Host, HostThreadMessage};
 use main_thread::{MainThread, MainThreadMessage};
 use shared::Shared;
@@ -17,6 +16,12 @@ use std::{
     sync::mpsc::{Receiver, Sender},
 };
 use walkdir::WalkDir;
+
+#[cfg(feature = "gui")]
+use extensions::gui::GuiExt;
+
+#[cfg(not(feature = "gui"))]
+use extensions::no_gui::run_no_gui;
 
 #[must_use]
 pub fn get_installed_plugins() -> Vec<PluginBundle> {
@@ -112,25 +117,38 @@ pub fn run(
             .start_processing()
             .unwrap();
 
-        let mut gui = instance
-            .access_handler(|h| h.gui)
-            .map(|gui| GuiExt::new(gui, &mut instance.plugin_handle()))
-            .unwrap();
+        #[cfg(not(feature = "gui"))]
+        {
+            run_no_gui(
+                instance,
+                &sender_host,
+                receiver_plugin,
+                &mut AudioProcessor::new(audio_processor, config),
+            );
+        }
 
-        if gui.needs_floating().unwrap() {
-            gui.run_gui_floating(
-                instance,
-                &sender_host,
-                receiver_plugin,
-                &mut AudioProcessor::new(audio_processor, config),
-            );
-        } else {
-            gui.run_gui_embedded(
-                instance,
-                &sender_host,
-                receiver_plugin,
-                &mut AudioProcessor::new(audio_processor, config),
-            );
+        #[cfg(feature = "gui")]
+        {
+            let mut gui = instance
+                .access_handler(|h| h.gui)
+                .map(|gui| GuiExt::new(gui, &mut instance.plugin_handle()))
+                .unwrap();
+
+            if gui.needs_floating().unwrap() {
+                gui.run_gui_floating(
+                    instance,
+                    &sender_host,
+                    receiver_plugin,
+                    &mut AudioProcessor::new(audio_processor, config),
+                );
+            } else {
+                gui.run_gui_embedded(
+                    instance,
+                    &sender_host,
+                    receiver_plugin,
+                    &mut AudioProcessor::new(audio_processor, config),
+                );
+            }
         }
     });
 
