@@ -1,12 +1,10 @@
-use std::sync::mpsc::{Receiver, Sender};
-
-use clack_host::plugin::PluginInstance;
-
 use crate::{
     audio_processor::AudioProcessor,
     host::{Host, HostThreadMessage},
     main_thread::MainThreadMessage,
 };
+use clack_host::plugin::PluginInstance;
+use std::sync::mpsc::{Receiver, Sender};
 
 pub fn run_no_gui(
     mut instance: PluginInstance<Host>,

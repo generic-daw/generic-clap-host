@@ -10,7 +10,7 @@ pub enum MainThreadMessage {
     GetCounter,
 }
 
-pub(crate) struct MainThread<'a> {
+pub struct MainThread<'a> {
     plugin: Option<InitializedPluginHandle<'a>>,
     pub gui: Option<PluginGui>,
 }
@@ -23,7 +23,7 @@ impl<'a> MainThreadHandler<'a> for MainThread<'a> {
 }
 
 impl<'a> MainThread<'a> {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             plugin: None,
             gui: None,

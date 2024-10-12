@@ -36,7 +36,7 @@ impl HostGuiImpl for Shared {
 }
 
 impl Shared {
-    pub const fn new(sender: Sender<MainThreadMessage>) -> Self {
+    pub fn new(sender: Sender<MainThreadMessage>) -> Self {
         Self { sender }
     }
 }

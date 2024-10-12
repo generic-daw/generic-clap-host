@@ -1,14 +1,21 @@
-pub mod audio_processor;
+pub(crate) mod audio_processor;
 mod extensions;
-pub mod host;
-pub mod main_thread;
+
+pub(crate) mod host;
+pub use host::HostThreadMessage;
+
+pub(crate) mod main_thread;
+pub use main_thread::MainThreadMessage;
+
 mod shared;
+
+pub use clack_host;
 
 use audio_processor::AudioProcessor;
 use clack_host::prelude::*;
 use etcetera::{choose_base_strategy, BaseStrategy};
-use host::{Host, HostThreadMessage};
-use main_thread::{MainThread, MainThreadMessage};
+use host::Host;
+use main_thread::MainThread;
 use shared::Shared;
 use std::{
     path::PathBuf,

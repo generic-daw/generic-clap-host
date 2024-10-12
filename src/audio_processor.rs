@@ -1,17 +1,16 @@
+use crate::host::Host;
 use clack_host::{prelude::*, process::StartedPluginAudioProcessor};
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 
-use crate::host::Host;
-
-#[expect(missing_debug_implementations)]
 pub struct AudioProcessor {
+    #[expect(clippy::struct_field_names)]
     started_audio_processor: Option<StartedPluginAudioProcessor<Host>>,
     config: PluginAudioConfiguration,
     steady_time: AtomicU64,
 }
 
 impl AudioProcessor {
-    pub(crate) const fn new(
+    pub fn new(
         audio_processor: StartedPluginAudioProcessor<Host>,
         config: PluginAudioConfiguration,
     ) -> Self {
@@ -22,11 +21,11 @@ impl AudioProcessor {
         }
     }
 
-    pub(crate) fn steady_time(&self) -> u64 {
+    pub fn steady_time(&self) -> u64 {
         self.steady_time.load(SeqCst)
     }
 
-    pub(crate) fn process(
+    pub fn process(
         &mut self,
         input_audio_buffers: &mut [Vec<f32>; 2],
         input_events_buffer: &EventBuffer,
@@ -78,19 +77,5 @@ impl AudioProcessor {
             .fetch_add(u64::from(output_audio.frames_count().unwrap()), SeqCst);
 
         (output_audio_buffers, output_events_buffer)
-    }
-
-    /// # Panics
-    ///
-    /// panics if the underlying plugin's implementation fails for any reason
-    pub fn restart(&mut self) {
-        self.started_audio_processor = Some(
-            std::mem::take(&mut self.started_audio_processor)
-                .unwrap()
-                .stop_processing()
-                .start_processing()
-                .unwrap(),
-        );
-        self.steady_time.store(0, SeqCst);
     }
 }

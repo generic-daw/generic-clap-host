@@ -2,7 +2,7 @@ use crate::{main_thread::MainThread, shared::Shared};
 use clack_extensions::gui::HostGui;
 use clack_host::prelude::*;
 
-pub(crate) struct Host;
+pub struct Host;
 
 #[derive(Debug)]
 pub enum HostThreadMessage {
