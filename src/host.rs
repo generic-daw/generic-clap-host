@@ -5,6 +5,8 @@ use clack_host::prelude::*;
 use clack_extensions::gui::HostGui;
 #[cfg(feature = "params")]
 use clack_extensions::params::HostParams;
+#[cfg(feature = "state")]
+use clack_extensions::state::HostState;
 
 pub struct Host;
 
@@ -24,5 +26,7 @@ impl HostHandlers for Host {
         builder.register::<HostGui>();
         #[cfg(feature = "params")]
         builder.register::<HostParams>();
+        #[cfg(feature = "state")]
+        builder.register::<HostState>();
     }
 }

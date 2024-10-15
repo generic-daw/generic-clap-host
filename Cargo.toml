@@ -17,6 +17,7 @@ winit = { version = "0.30.5", optional = true }
 default = []
 gui = ["clack-extensions/gui", "winit"]
 params = ["clack-extensions/params"]
+state = ["clack-extensions/state"]
 
 [lints.rust]
 let-underscore = "warn"
