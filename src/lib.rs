@@ -68,7 +68,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
         paths.push(strategy.home_dir().join("Library/Audio/Plug-Ins/CLAP"));
     }
 
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     {
         if let Some(val) = std::env::var_os("CommonProgramFiles") {
             paths.push(PathBuf::from(val).join("CLAP"));
