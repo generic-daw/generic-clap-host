@@ -7,8 +7,7 @@ license = "MIT"
 [dependencies]
 clack-extensions = { git = "https://github.com/prokopyl/clack.git", features = [
     "clack-host",
-    "gui",
-] }
+], optional = true }
 clack-host = { git = "https://github.com/prokopyl/clack.git" }
 etcetera = "0.8.0"
 walkdir = "2.5.0"
@@ -16,7 +15,8 @@ winit = { version = "0.30.5", optional = true }
 
 [features]
 default = []
-gui = ["winit"]
+gui = ["clack-extensions/gui", "winit"]
+params = ["clack-extensions/params"]
 
 [lints.rust]
 let-underscore = "warn"

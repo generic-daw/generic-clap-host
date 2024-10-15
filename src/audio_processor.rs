@@ -1,4 +1,4 @@
-use crate::host::Host;
+use crate::Host;
 use clack_host::{prelude::*, process::StartedPluginAudioProcessor};
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 

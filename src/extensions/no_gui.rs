@@ -1,8 +1,4 @@
-use crate::{
-    audio_processor::AudioProcessor,
-    host::{Host, HostThreadMessage},
-    main_thread::MainThreadMessage,
-};
+use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_host::plugin::PluginInstance;
 use std::sync::mpsc::{Receiver, Sender};
 

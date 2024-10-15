@@ -1,7 +1,11 @@
 use crate::MainThreadMessage;
-use clack_extensions::gui::{GuiSize, HostGuiImpl};
 use clack_host::prelude::*;
 use std::sync::mpsc::Sender;
+
+#[cfg(feature = "gui")]
+use clack_extensions::gui::{GuiSize, HostGuiImpl};
+#[cfg(feature = "params")]
+use clack_extensions::params::HostParamsImplShared;
 
 pub struct Shared {
     sender: Sender<MainThreadMessage>,
@@ -13,6 +17,7 @@ impl<'a> SharedHandler<'a> for Shared {
     fn request_restart(&self) {}
 }
 
+#[cfg(feature = "gui")]
 impl HostGuiImpl for Shared {
     fn resize_hints_changed(&self) {}
 
@@ -32,6 +37,13 @@ impl HostGuiImpl for Shared {
 
     fn closed(&self, _was_destroyed: bool) {
         self.sender.send(MainThreadMessage::GuiClosed).unwrap();
+    }
+}
+
+#[cfg(feature = "params")]
+impl HostParamsImplShared for Shared {
+    fn request_flush(&self) {
+        todo!()
     }
 }
 

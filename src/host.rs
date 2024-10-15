@@ -1,6 +1,10 @@
-use crate::{main_thread::MainThread, shared::Shared};
-use clack_extensions::gui::HostGui;
+use crate::{MainThread, Shared};
 use clack_host::prelude::*;
+
+#[cfg(feature = "gui")]
+use clack_extensions::gui::HostGui;
+#[cfg(feature = "params")]
+use clack_extensions::params::HostParams;
 
 pub struct Host;
 
@@ -16,6 +20,9 @@ impl HostHandlers for Host {
     type AudioProcessor<'a> = ();
 
     fn declare_extensions(builder: &mut HostExtensions<'_, Self>, _shared: &Self::Shared<'_>) {
+        #[cfg(feature = "gui")]
         builder.register::<HostGui>();
+        #[cfg(feature = "params")]
+        builder.register::<HostParams>();
     }
 }

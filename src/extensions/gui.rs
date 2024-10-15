@@ -1,4 +1,4 @@
-use crate::{host::Host, AudioProcessor, HostThreadMessage, MainThreadMessage};
+use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui};
 use clack_host::prelude::*;
 use std::sync::mpsc::{Receiver, Sender};
