@@ -1,11 +1,10 @@
 use crate::MainThreadMessage;
-use clack_host::prelude::*;
-use std::sync::mpsc::Sender;
-
 #[cfg(feature = "gui")]
 use clack_extensions::gui::{GuiSize, HostGuiImpl};
 #[cfg(feature = "params")]
 use clack_extensions::params::HostParamsImplShared;
+use clack_host::prelude::*;
+use std::sync::mpsc::Sender;
 
 pub struct Shared {
     sender: Sender<MainThreadMessage>,

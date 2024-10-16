@@ -1,5 +1,3 @@
-use clack_host::prelude::*;
-
 #[cfg(feature = "audio-ports")]
 use clack_extensions::audio_ports::{HostAudioPortsImpl, RescanType};
 #[cfg(feature = "gui")]
@@ -14,6 +12,9 @@ use clack_extensions::params::{HostParamsImplMainThread, ParamClearFlags, ParamR
 use clack_extensions::state::HostStateImpl;
 #[cfg(feature = "timer")]
 use clack_extensions::timer::{HostTimerImpl, TimerId};
+use clack_host::prelude::*;
+#[cfg(feature = "log")]
+use tracing::{debug, error, info, warn};
 
 #[expect(missing_debug_implementations)]
 pub enum MainThreadMessage {
@@ -31,8 +32,6 @@ pub struct MainThread<'a> {
     plugin: Option<InitializedPluginHandle<'a>>,
     #[cfg(feature = "gui")]
     pub gui: Option<PluginGui>,
-    #[cfg(feature = "state")]
-    state_dirty: bool,
 }
 
 impl<'a> MainThreadHandler<'a> for MainThread<'a> {
@@ -40,10 +39,6 @@ impl<'a> MainThreadHandler<'a> for MainThread<'a> {
         #[cfg(feature = "gui")]
         {
             self.gui = instance.get_extension();
-        }
-        #[cfg(feature = "params")]
-        {
-            self.state_dirty = false;
         }
         self.plugin = Some(instance);
     }
@@ -62,8 +57,16 @@ impl HostAudioPortsImpl for MainThread<'_> {
 
 #[cfg(feature = "log")]
 impl HostLogImpl for MainThread<'_> {
-    fn log(&self, _severity: LogSeverity, _message: &str) {
-        todo!()
+    fn log(&self, severity: LogSeverity, message: &str) {
+        match severity {
+            LogSeverity::Info => info!(message),
+            LogSeverity::Debug => debug!(message),
+            LogSeverity::Warning => warn!(message),
+            LogSeverity::Error
+            | LogSeverity::Fatal
+            | LogSeverity::HostMisbehaving
+            | LogSeverity::PluginMisbehaving => error!(message),
+        }
     }
 }
 
@@ -92,7 +95,7 @@ impl HostParamsImplMainThread for MainThread<'_> {
 #[cfg(feature = "state")]
 impl HostStateImpl for MainThread<'_> {
     fn mark_dirty(&mut self) {
-        self.state_dirty = true;
+        todo!()
     }
 }
 

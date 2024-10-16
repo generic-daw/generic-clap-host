@@ -1,21 +1,15 @@
-pub(crate) mod audio_processor;
-mod extensions;
-
-pub(crate) mod host;
-pub use host::HostThreadMessage;
-
-pub(crate) mod main_thread;
-pub use main_thread::MainThreadMessage;
-
-mod shared;
-
-pub use clack_host;
-
 use audio_processor::AudioProcessor;
+pub use clack_host;
 use clack_host::prelude::*;
 use etcetera::{choose_base_strategy, BaseStrategy};
+#[cfg(feature = "gui")]
+use extensions::gui::GuiExt;
+#[cfg(not(feature = "gui"))]
+use extensions::no_gui::run_no_gui;
 use host::Host;
+pub use host::HostThreadMessage;
 use main_thread::MainThread;
+pub use main_thread::MainThreadMessage;
 use shared::Shared;
 use std::{
     path::PathBuf,
@@ -24,11 +18,12 @@ use std::{
 };
 use walkdir::WalkDir;
 
-#[cfg(feature = "gui")]
-use extensions::gui::GuiExt;
+pub(crate) mod audio_processor;
+mod extensions;
+pub(crate) mod host;
+pub(crate) mod main_thread;
 
-#[cfg(not(feature = "gui"))]
-use extensions::no_gui::run_no_gui;
+mod shared;
 
 #[must_use]
 pub fn get_installed_plugins() -> Vec<PluginBundle> {

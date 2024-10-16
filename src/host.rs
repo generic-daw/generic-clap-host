@@ -1,6 +1,4 @@
 use crate::{MainThread, Shared};
-use clack_host::prelude::*;
-
 #[cfg(feature = "audio-ports")]
 use clack_extensions::audio_ports::HostAudioPorts;
 #[cfg(feature = "gui")]
@@ -13,6 +11,7 @@ use clack_extensions::params::HostParams;
 use clack_extensions::state::HostState;
 #[cfg(feature = "timer")]
 use clack_extensions::timer::HostTimer;
+use clack_host::prelude::*;
 
 pub struct Host;
 

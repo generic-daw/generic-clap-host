@@ -10,6 +10,7 @@ clack-extensions = { git = "https://github.com/prokopyl/clack.git", features = [
 ], optional = true }
 clack-host = { git = "https://github.com/prokopyl/clack.git" }
 etcetera = "0.8.0"
+tracing = { version = "0.1.40", optional = true }
 walkdir = "2.5.0"
 winit = { version = "0.30.5", optional = true }
 
@@ -17,7 +18,7 @@ winit = { version = "0.30.5", optional = true }
 default = []
 audio-ports = ["clack-extensions/audio-ports"]
 gui = ["clack-extensions/gui", "winit"]
-log = ["clack-extensions/log"]
+log = ["clack-extensions/log", "tracing"]
 note-ports = ["clack-extensions/note-ports"]
 params = ["clack-extensions/params"]
 state = ["clack-extensions/state"]
