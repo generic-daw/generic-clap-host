@@ -1,11 +1,19 @@
 use clack_host::prelude::*;
 
+#[cfg(feature = "audio-ports")]
+use clack_extensions::audio_ports::{HostAudioPortsImpl, RescanType};
 #[cfg(feature = "gui")]
 use clack_extensions::gui::{GuiSize, PluginGui};
+#[cfg(feature = "log")]
+use clack_extensions::log::{HostLogImpl, LogSeverity};
+#[cfg(feature = "note-ports")]
+use clack_extensions::note_ports::{HostNotePortsImpl, NoteDialects, NotePortRescanFlags};
 #[cfg(feature = "params")]
 use clack_extensions::params::{HostParamsImplMainThread, ParamClearFlags, ParamRescanFlags};
 #[cfg(feature = "state")]
 use clack_extensions::state::HostStateImpl;
+#[cfg(feature = "timer")]
+use clack_extensions::timer::{HostTimerImpl, TimerId};
 
 #[expect(missing_debug_implementations)]
 pub enum MainThreadMessage {
@@ -18,6 +26,7 @@ pub enum MainThreadMessage {
     GetCounter,
 }
 
+#[derive(Default)]
 pub struct MainThread<'a> {
     plugin: Option<InitializedPluginHandle<'a>>,
     #[cfg(feature = "gui")]
@@ -40,6 +49,35 @@ impl<'a> MainThreadHandler<'a> for MainThread<'a> {
     }
 }
 
+#[cfg(feature = "audio-ports")]
+impl HostAudioPortsImpl for MainThread<'_> {
+    fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
+        todo!()
+    }
+
+    fn rescan(&mut self, _flag: RescanType) {
+        todo!()
+    }
+}
+
+#[cfg(feature = "log")]
+impl HostLogImpl for MainThread<'_> {
+    fn log(&self, _severity: LogSeverity, _message: &str) {
+        todo!()
+    }
+}
+
+#[cfg(feature = "note-ports")]
+impl HostNotePortsImpl for MainThread<'_> {
+    fn supported_dialects(&self) -> NoteDialects {
+        todo!()
+    }
+
+    fn rescan(&mut self, _flags: NotePortRescanFlags) {
+        todo!()
+    }
+}
+
 #[cfg(feature = "params")]
 impl HostParamsImplMainThread for MainThread<'_> {
     fn clear(&mut self, _id: ClapId, _flags: ParamClearFlags) {
@@ -58,20 +96,13 @@ impl HostStateImpl for MainThread<'_> {
     }
 }
 
-impl<'a> MainThread<'a> {
-    pub fn new() -> Self {
-        Self {
-            plugin: None,
-            #[cfg(feature = "gui")]
-            gui: None,
-            #[cfg(feature = "state")]
-            state_dirty: false,
-        }
+#[cfg(feature = "timer")]
+impl HostTimerImpl for MainThread<'_> {
+    fn register_timer(&mut self, _period_ms: u32) -> Result<TimerId, HostError> {
+        todo!()
     }
-}
 
-impl<'a> Default for MainThread<'a> {
-    fn default() -> Self {
-        Self::new()
+    fn unregister_timer(&mut self, _timer_id: TimerId) -> Result<(), HostError> {
+        todo!()
     }
 }

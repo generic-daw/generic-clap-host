@@ -111,7 +111,7 @@ pub fn run(
         let plugin_descriptor = factory.plugin_descriptors().next().unwrap();
         let mut instance = PluginInstance::<Host>::new(
             |()| Shared::new(sender_plugin_clone),
-            |_| MainThread::new(),
+            |_| MainThread::default(),
             &bundle,
             plugin_descriptor.id().unwrap(),
             &HostInfo::new("", "", "", "").unwrap(),

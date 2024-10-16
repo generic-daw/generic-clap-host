@@ -15,9 +15,13 @@ winit = { version = "0.30.5", optional = true }
 
 [features]
 default = []
+audio-ports = ["clack-extensions/audio-ports"]
 gui = ["clack-extensions/gui", "winit"]
+log = ["clack-extensions/log"]
+note-ports = ["clack-extensions/note-ports"]
 params = ["clack-extensions/params"]
 state = ["clack-extensions/state"]
+timer = ["clack-extensions/timer"]
 
 [lints.rust]
 let-underscore = "warn"
