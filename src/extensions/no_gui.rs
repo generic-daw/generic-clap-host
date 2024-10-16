@@ -36,7 +36,6 @@ pub fn run_no_gui(
                     .send(HostThreadMessage::Counter(audio_processor.steady_time()))
                     .unwrap();
             }
-            _ => {}
         }
     }
 }

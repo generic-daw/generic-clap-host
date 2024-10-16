@@ -100,12 +100,19 @@ pub fn run(
     let (sender_plugin, receiver_plugin) = std::sync::mpsc::channel();
     let (sender_host, receiver_host) = std::sync::mpsc::channel();
 
+    #[cfg(feature = "gui")]
     let sender_plugin_clone = sender_plugin.clone();
+
     std::thread::spawn(move || {
         let factory = bundle.get_plugin_factory().unwrap();
         let plugin_descriptor = factory.plugin_descriptors().next().unwrap();
         let mut instance = PluginInstance::<Host>::new(
-            |()| Shared::new(sender_plugin_clone),
+            |()| {
+                Shared::new(
+                    #[cfg(feature = "gui")]
+                    sender_plugin_clone,
+                )
+            },
             |_| MainThread::default(),
             &bundle,
             plugin_descriptor.id().unwrap(),

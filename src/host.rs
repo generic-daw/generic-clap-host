@@ -39,5 +39,6 @@ impl HostHandlers for Host {
         builder.register::<HostState>();
         #[cfg(feature = "timer")]
         builder.register::<HostTimer>();
+        let _ = builder;
     }
 }

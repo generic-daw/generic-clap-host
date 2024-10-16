@@ -1,3 +1,5 @@
+#[cfg(feature = "timer")]
+use crate::extensions::timer::Timers;
 #[cfg(feature = "audio-ports")]
 use clack_extensions::audio_ports::{HostAudioPortsImpl, RescanType};
 #[cfg(feature = "gui")]
@@ -13,6 +15,8 @@ use clack_extensions::state::HostStateImpl;
 #[cfg(feature = "timer")]
 use clack_extensions::timer::{HostTimerImpl, TimerId};
 use clack_host::prelude::*;
+#[cfg(feature = "timer")]
+use std::{rc::Rc, time::Duration};
 #[cfg(feature = "log")]
 use tracing::{debug, error, info, warn};
 
@@ -32,6 +36,8 @@ pub struct MainThread<'a> {
     plugin: Option<InitializedPluginHandle<'a>>,
     #[cfg(feature = "gui")]
     pub gui: Option<PluginGui>,
+    #[cfg(feature = "timer")]
+    pub timers: Rc<Timers>,
 }
 
 impl<'a> MainThreadHandler<'a> for MainThread<'a> {
@@ -100,12 +106,18 @@ impl HostStateImpl for MainThread<'_> {
 }
 
 #[cfg(feature = "timer")]
-impl HostTimerImpl for MainThread<'_> {
-    fn register_timer(&mut self, _period_ms: u32) -> Result<TimerId, HostError> {
-        todo!()
+impl<'a> HostTimerImpl for MainThread<'a> {
+    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
+        Ok(self
+            .timers
+            .register_new(Duration::from_millis(u64::from(period_ms))))
     }
 
-    fn unregister_timer(&mut self, _timer_id: TimerId) -> Result<(), HostError> {
-        todo!()
+    fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError> {
+        if self.timers.unregister(timer_id) {
+            Ok(())
+        } else {
+            Err(HostError::Message("Unknown timer ID"))
+        }
     }
 }

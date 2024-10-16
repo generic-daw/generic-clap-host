@@ -1,12 +1,15 @@
+#[cfg(feature = "gui")]
 use crate::MainThreadMessage;
 #[cfg(feature = "gui")]
 use clack_extensions::gui::{GuiSize, HostGuiImpl};
 #[cfg(feature = "params")]
 use clack_extensions::params::HostParamsImplShared;
 use clack_host::prelude::*;
+#[cfg(feature = "gui")]
 use std::sync::mpsc::Sender;
 
 pub struct Shared {
+    #[cfg(feature = "gui")]
     sender: Sender<MainThreadMessage>,
 }
 
@@ -47,7 +50,10 @@ impl HostParamsImplShared for Shared {
 }
 
 impl Shared {
-    pub fn new(sender: Sender<MainThreadMessage>) -> Self {
-        Self { sender }
+    pub fn new(#[cfg(feature = "gui")] sender: Sender<MainThreadMessage>) -> Self {
+        Self {
+            #[cfg(feature = "gui")]
+            sender,
+        }
     }
 }
