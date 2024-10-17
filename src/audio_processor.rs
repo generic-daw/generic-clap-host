@@ -27,11 +27,11 @@ impl AudioProcessor {
 
     pub fn process(
         &mut self,
-        input_audio_buffers: &mut [Vec<f32>; 2],
+        #[expect(clippy::ptr_arg)] input_audio_buffers: &mut Vec<Vec<f32>>,
         input_events_buffer: &EventBuffer,
         input_ports: &mut AudioPorts,
         output_ports: &mut AudioPorts,
-    ) -> ([Vec<f32>; 2], EventBuffer) {
+    ) -> (Vec<Vec<f32>>, EventBuffer) {
         assert_eq!(input_audio_buffers[0].len(), input_audio_buffers[1].len());
         assert!(
             input_audio_buffers[0].len() < usize::try_from(self.config.max_frames_count).unwrap()

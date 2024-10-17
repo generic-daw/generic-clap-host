@@ -17,7 +17,7 @@ pub struct Host;
 
 #[derive(Debug)]
 pub enum HostThreadMessage {
-    AudioProcessed([Vec<f32>; 2], EventBuffer),
+    AudioProcessed(Vec<Vec<f32>>, EventBuffer),
     Counter(u64),
 }
 

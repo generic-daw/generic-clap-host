@@ -27,7 +27,7 @@ pub enum MainThreadMessage {
     GuiClosed,
     #[cfg(feature = "gui")]
     GuiRequestResized(GuiSize),
-    ProcessAudio([Vec<f32>; 2], AudioPorts, AudioPorts, EventBuffer),
+    ProcessAudio(Vec<Vec<f32>>, AudioPorts, AudioPorts, EventBuffer),
     GetCounter,
 }
 
