@@ -18,10 +18,10 @@ use std::{
 };
 use walkdir::WalkDir;
 
-pub(crate) mod audio_processor;
+pub(in crate) mod audio_processor;
 mod extensions;
-pub(crate) mod host;
-pub(crate) mod main_thread;
+pub(in crate) mod host;
+pub(in crate) mod main_thread;
 
 mod shared;
 
