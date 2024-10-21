@@ -18,10 +18,10 @@ use std::{
 };
 use walkdir::WalkDir;
 
-pub(in crate) mod audio_processor;
+pub(crate) mod audio_processor;
 mod extensions;
-pub(in crate) mod host;
-pub(in crate) mod main_thread;
+pub(crate) mod host;
+pub(crate) mod main_thread;
 
 mod shared;
 
@@ -100,19 +100,13 @@ pub fn run(
     let (sender_plugin, receiver_plugin) = std::sync::mpsc::channel();
     let (sender_host, receiver_host) = std::sync::mpsc::channel();
 
-    #[cfg(feature = "gui")]
     let sender_plugin_clone = sender_plugin.clone();
 
     std::thread::spawn(move || {
         let factory = bundle.get_plugin_factory().unwrap();
         let plugin_descriptor = factory.plugin_descriptors().next().unwrap();
         let mut instance = PluginInstance::<Host>::new(
-            |()| {
-                Shared::new(
-                    #[cfg(feature = "gui")]
-                    sender_plugin_clone,
-                )
-            },
+            |()| Shared::new(sender_plugin_clone),
             |_| MainThread::default(),
             &bundle,
             plugin_descriptor.id().unwrap(),
@@ -131,7 +125,7 @@ pub fn run(
             run_no_gui(
                 instance,
                 &sender_host,
-                receiver_plugin,
+                &receiver_plugin,
                 &mut AudioProcessor::new(audio_processor, config),
             );
         }
@@ -147,14 +141,14 @@ pub fn run(
                 gui.run_gui_floating(
                     instance,
                     &sender_host,
-                    receiver_plugin,
+                    &receiver_plugin,
                     &mut AudioProcessor::new(audio_processor, config),
                 );
             } else {
                 gui.run_gui_embedded(
                     instance,
                     &sender_host,
-                    receiver_plugin,
+                    &receiver_plugin,
                     &mut AudioProcessor::new(audio_processor, config),
                 );
             }

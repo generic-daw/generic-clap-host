@@ -1,7 +1,10 @@
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui};
 use clack_host::prelude::*;
-use std::sync::mpsc::{Receiver, Sender};
+use std::{
+    sync::mpsc::{Receiver, Sender},
+    time::Duration,
+};
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
 
 pub struct GuiExt {
@@ -125,12 +128,12 @@ impl GuiExt {
         }
     }
 
-    #[expect(clippy::needless_pass_by_value, clippy::needless_pass_by_ref_mut)]
+    #[expect(clippy::needless_pass_by_ref_mut)]
     pub fn run_gui_embedded(
         &mut self,
         mut _instance: PluginInstance<Host>,
         _sender: &Sender<HostThreadMessage>,
-        _receiver: Receiver<MainThreadMessage>,
+        _receiver: &Receiver<MainThreadMessage>,
         _audio_processor: &mut AudioProcessor,
     ) {
         todo!()
@@ -140,52 +143,75 @@ impl GuiExt {
         &mut self,
         mut instance: PluginInstance<Host>,
         sender: &Sender<HostThreadMessage>,
-        receiver: Receiver<MainThreadMessage>,
+        receiver: &Receiver<MainThreadMessage>,
         audio_processor: &mut AudioProcessor,
     ) {
         self.open_floating(&mut instance.plugin_handle()).unwrap();
+        #[cfg(feature = "timer")]
+        let timers =
+            instance.access_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
 
-        for message in receiver {
-            match message {
-                MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-                MainThreadMessage::GuiClosed { .. } => {
-                    break;
-                }
-                MainThreadMessage::GuiRequestResized(gui_size) => {
-                    self.resize(
-                        &mut instance.plugin_handle(),
-                        self.gui_size_to_winit_size(gui_size),
-                        1.0f64,
-                    );
-                }
-                MainThreadMessage::ProcessAudio(
-                    mut input_buffers,
-                    mut input_audio_ports,
-                    mut output_audio_ports,
-                    input_events,
-                ) => {
-                    let (output_buffers, output_events) = audio_processor.process(
-                        &mut input_buffers,
-                        &input_events,
-                        &mut input_audio_ports,
-                        &mut output_audio_ports,
-                    );
+        loop {
+            while let Ok(message) = receiver.try_recv() {
+                match message {
+                    MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+                    MainThreadMessage::GuiClosed { .. } => {
+                        self.destroy(&mut instance.plugin_handle());
+                        return;
+                    }
+                    MainThreadMessage::GuiRequestResized(gui_size) => {
+                        self.resize(
+                            &mut instance.plugin_handle(),
+                            self.gui_size_to_winit_size(gui_size),
+                            1.0f64,
+                        );
+                    }
+                    MainThreadMessage::ProcessAudio(
+                        mut input_buffers,
+                        mut input_audio_ports,
+                        mut output_audio_ports,
+                        input_events,
+                    ) => {
+                        let (output_buffers, output_events) = audio_processor.process(
+                            &mut input_buffers,
+                            &input_events,
+                            &mut input_audio_ports,
+                            &mut output_audio_ports,
+                        );
 
-                    sender
-                        .send(HostThreadMessage::AudioProcessed(
-                            output_buffers,
-                            output_events,
-                        ))
-                        .unwrap();
-                }
-                MainThreadMessage::GetCounter => {
-                    sender
-                        .send(HostThreadMessage::Counter(audio_processor.steady_time()))
-                        .unwrap();
+                        sender
+                            .send(HostThreadMessage::AudioProcessed(
+                                output_buffers,
+                                output_events,
+                            ))
+                            .unwrap();
+                    }
+                    MainThreadMessage::GetCounter => {
+                        sender
+                            .send(HostThreadMessage::Counter(audio_processor.steady_time()))
+                            .unwrap();
+                    }
                 }
             }
-        }
 
-        self.destroy(&mut instance.plugin_handle());
+            std::thread::sleep(
+                #[cfg(feature = "timer")]
+                {
+                    if let Some((timers, timer_ext)) = &timers {
+                        timers.tick_timers(timer_ext, &mut instance.plugin_handle());
+
+                        timers
+                            .smallest_duration()
+                            .unwrap_or(Duration::from_millis(30))
+                    } else {
+                        Duration::from_millis(30)
+                    }
+                },
+                #[cfg(not(feature = "timer"))]
+                {
+                    Duration::from_millis(30)
+                },
+            );
+        }
     }
 }

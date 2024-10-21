@@ -1,27 +1,34 @@
-#[cfg(feature = "gui")]
 use crate::MainThreadMessage;
 #[cfg(feature = "gui")]
 use clack_extensions::gui::{GuiSize, HostGuiImpl};
 #[cfg(feature = "params")]
 use clack_extensions::params::HostParamsImplShared;
 use clack_host::prelude::*;
-#[cfg(feature = "gui")]
 use std::sync::mpsc::Sender;
 
 pub struct Shared {
-    #[cfg(feature = "gui")]
     sender: Sender<MainThreadMessage>,
 }
 
 impl<'a> SharedHandler<'a> for Shared {
-    fn request_process(&self) {}
-    fn request_callback(&self) {}
-    fn request_restart(&self) {}
+    fn request_process(&self) {
+        // we never pause
+    }
+    fn request_callback(&self) {
+        self.sender
+            .send(MainThreadMessage::RunOnMainThread)
+            .unwrap();
+    }
+    fn request_restart(&self) {
+        // we don't support restarting plugins (yet)
+    }
 }
 
 #[cfg(feature = "gui")]
 impl HostGuiImpl for Shared {
-    fn resize_hints_changed(&self) {}
+    fn resize_hints_changed(&self) {
+        // we don't support resize hints (yet)
+    }
 
     fn request_resize(&self, new_size: GuiSize) -> Result<(), HostError> {
         Ok(self
@@ -30,10 +37,12 @@ impl HostGuiImpl for Shared {
     }
 
     fn request_show(&self) -> Result<(), HostError> {
+        // we never hide the window, so showing it does nothing
         Ok(())
     }
 
     fn request_hide(&self) -> Result<(), HostError> {
+        // we never hide the window
         Ok(())
     }
 
@@ -45,15 +54,12 @@ impl HostGuiImpl for Shared {
 #[cfg(feature = "params")]
 impl HostParamsImplShared for Shared {
     fn request_flush(&self) {
-        todo!()
+        // Can never flush events when not processing: we're never not processing
     }
 }
 
 impl Shared {
-    pub fn new(#[cfg(feature = "gui")] sender: Sender<MainThreadMessage>) -> Self {
-        Self {
-            #[cfg(feature = "gui")]
-            sender,
-        }
+    pub fn new(sender: Sender<MainThreadMessage>) -> Self {
+        Self { sender }
     }
 }

@@ -13,7 +13,7 @@ use clack_extensions::params::{HostParamsImplMainThread, ParamClearFlags, ParamR
 #[cfg(feature = "state")]
 use clack_extensions::state::HostStateImpl;
 #[cfg(feature = "timer")]
-use clack_extensions::timer::{HostTimerImpl, TimerId};
+use clack_extensions::timer::{HostTimerImpl, PluginTimer, TimerId};
 use clack_host::prelude::*;
 #[cfg(feature = "timer")]
 use std::{rc::Rc, time::Duration};
@@ -37,6 +37,8 @@ pub struct MainThread<'a> {
     #[cfg(feature = "gui")]
     pub gui: Option<PluginGui>,
     #[cfg(feature = "timer")]
+    pub timer_support: Option<PluginTimer>,
+    #[cfg(feature = "timer")]
     pub timers: Rc<Timers>,
 }
 
@@ -46,6 +48,11 @@ impl<'a> MainThreadHandler<'a> for MainThread<'a> {
         {
             self.gui = instance.get_extension();
         }
+        #[cfg(feature = "timer")]
+        {
+            self.timer_support = instance.get_extension();
+            self.timers = Rc::new(Timers::default());
+        }
         self.plugin = Some(instance);
     }
 }
@@ -53,11 +60,11 @@ impl<'a> MainThreadHandler<'a> for MainThread<'a> {
 #[cfg(feature = "audio-ports")]
 impl HostAudioPortsImpl for MainThread<'_> {
     fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
-        todo!()
+        false
     }
 
     fn rescan(&mut self, _flag: RescanType) {
-        todo!()
+        // we don't support audio ports changing on the fly (yet)
     }
 }
 
@@ -79,22 +86,20 @@ impl HostLogImpl for MainThread<'_> {
 #[cfg(feature = "note-ports")]
 impl HostNotePortsImpl for MainThread<'_> {
     fn supported_dialects(&self) -> NoteDialects {
-        todo!()
+        NoteDialects::CLAP
     }
 
     fn rescan(&mut self, _flags: NotePortRescanFlags) {
-        todo!()
+        // We don't support note ports changing on the fly (yet)
     }
 }
 
 #[cfg(feature = "params")]
 impl HostParamsImplMainThread for MainThread<'_> {
-    fn clear(&mut self, _id: ClapId, _flags: ParamClearFlags) {
-        todo!()
-    }
+    fn clear(&mut self, _id: ClapId, _flags: ParamClearFlags) {}
 
     fn rescan(&mut self, _flags: ParamRescanFlags) {
-        todo!()
+        // We don't track param values (yet)
     }
 }
 
