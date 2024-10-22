@@ -58,11 +58,6 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 
     paths.push(strategy.home_dir().join(".clap"));
 
-    #[cfg(target_os = "macos")]
-    {
-        paths.push(strategy.home_dir().join("Library/Audio/Plug-Ins/CLAP"));
-    }
-
     #[cfg(target_os = "windows")]
     {
         if let Some(val) = std::env::var_os("CommonProgramFiles") {
@@ -74,13 +69,13 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 
     #[cfg(target_os = "macos")]
     {
+        paths.push(strategy.home_dir().join("Library/Audio/Plug-Ins/CLAP"));
+
         paths.push(PathBuf::from("/Library/Audio/Plug-Ins/CLAP"));
     }
 
     #[cfg(target_family = "unix")]
-    {
-        paths.push("/usr/lib/clap".into());
-    }
+    paths.push("/usr/lib/clap".into());
 
     if let Some(env_var) = std::env::var_os("CLAP_PATH") {
         paths.extend(std::env::split_paths(&env_var));
@@ -121,14 +116,12 @@ pub fn run(
             .unwrap();
 
         #[cfg(not(feature = "gui"))]
-        {
-            run_no_gui(
-                instance,
-                &sender_host,
-                &receiver_plugin,
-                &mut AudioProcessor::new(audio_processor, config),
-            );
-        }
+        run_no_gui(
+            instance,
+            &sender_host,
+            &receiver_plugin,
+            &mut AudioProcessor::new(audio_processor, config),
+        );
 
         #[cfg(feature = "gui")]
         {

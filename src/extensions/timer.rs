@@ -8,7 +8,7 @@ pub struct Timers {
     #[expect(clippy::struct_field_names)]
     timers: RefCell<HashMap<TimerId, Timer>>,
     latest_id: Cell<u32>,
-    smallest_duration: Cell<Option<Duration>>,
+    next_tick: Cell<Option<Instant>>,
 }
 
 impl Default for Timers {
@@ -16,19 +16,24 @@ impl Default for Timers {
         Self {
             timers: RefCell::new(HashMap::new()),
             latest_id: Cell::new(0),
-            smallest_duration: Cell::new(None),
+            next_tick: Cell::new(None),
         }
     }
 }
 
 impl Timers {
     fn tick_all(&self) -> Vec<TimerId> {
-        let now = Instant::now();
-        self.timers
+        let timers = self
+            .timers
             .borrow_mut()
             .values_mut()
-            .filter_map(move |t| t.tick(now).then_some(t.id))
-            .collect()
+            .filter_map(move |t| t.tick().then_some(t.id))
+            .collect();
+
+        self.next_tick
+            .set(self.timers.borrow().values().map(Timer::next_tick).min());
+
+        timers
     }
 
     pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &mut PluginMainThreadHandle<'_>) {
@@ -48,9 +53,10 @@ impl Timers {
             .borrow_mut()
             .insert(id, Timer::new(id, interval));
 
-        match self.smallest_duration.get() {
-            None => self.smallest_duration.set(Some(interval)),
-            Some(smallest) if smallest > interval => self.smallest_duration.set(Some(interval)),
+        let next_tick = Instant::now() + interval;
+        match self.next_tick.get() {
+            None => self.next_tick.set(Some(next_tick)),
+            Some(smallest) if smallest > next_tick => self.next_tick.set(Some(next_tick)),
             _ => {}
         }
 
@@ -60,16 +66,20 @@ impl Timers {
     pub fn unregister(&self, id: TimerId) -> bool {
         let mut timers = self.timers.borrow_mut();
         if timers.remove(&id).is_some() {
-            self.smallest_duration
-                .set(timers.values().map(|t| t.interval).min());
+            self.next_tick.set(
+                timers
+                    .values()
+                    .map(|t| t.last_triggered_at.unwrap_or_else(Instant::now) + t.interval)
+                    .min(),
+            );
             true
         } else {
             false
         }
     }
 
-    pub fn smallest_duration(&self) -> Option<Duration> {
-        self.smallest_duration.get()
+    pub fn next_tick(&self) -> Option<Instant> {
+        self.next_tick.get()
     }
 }
 
@@ -88,10 +98,11 @@ impl Timer {
         }
     }
 
-    fn tick(&mut self, now: Instant) -> bool {
+    fn tick(&mut self) -> bool {
+        let now = Instant::now();
         let triggered = if let Some(last_updated_at) = self.last_triggered_at {
             if let Some(since) = now.checked_duration_since(last_updated_at) {
-                since > self.interval
+                since >= self.interval
             } else {
                 false
             }
@@ -104,5 +115,9 @@ impl Timer {
         }
 
         triggered
+    }
+
+    fn next_tick(&self) -> Instant {
+        self.last_triggered_at.unwrap_or_else(Instant::now) + self.interval
     }
 }

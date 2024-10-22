@@ -1,6 +1,8 @@
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui};
 use clack_host::prelude::*;
+#[cfg(feature = "timer")]
+use std::time::Instant;
 use std::{
     sync::mpsc::{Receiver, Sender},
     time::Duration,
@@ -152,6 +154,21 @@ impl GuiExt {
             instance.access_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
 
         loop {
+            #[cfg(feature = "timer")]
+            let sleep_duration = timers
+                .as_ref()
+                .and_then(|(timers, _)| Some(timers.next_tick()? - Instant::now()))
+                .unwrap_or(Duration::from_millis(30));
+            #[cfg(not(feature = "timer"))]
+            let sleep_duration = Duration::from_millis(30);
+
+            std::thread::sleep(sleep_duration);
+
+            #[cfg(feature = "timer")]
+            if let Some((timers, timer_ext)) = &timers {
+                timers.tick_timers(timer_ext, &mut instance.plugin_handle());
+            }
+
             while let Ok(message) = receiver.try_recv() {
                 match message {
                     MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
@@ -193,25 +210,6 @@ impl GuiExt {
                     }
                 }
             }
-
-            std::thread::sleep(
-                #[cfg(feature = "timer")]
-                {
-                    if let Some((timers, timer_ext)) = &timers {
-                        timers.tick_timers(timer_ext, &mut instance.plugin_handle());
-
-                        timers
-                            .smallest_duration()
-                            .unwrap_or(Duration::from_millis(30))
-                    } else {
-                        Duration::from_millis(30)
-                    }
-                },
-                #[cfg(not(feature = "timer"))]
-                {
-                    Duration::from_millis(30)
-                },
-            );
         }
     }
 }
