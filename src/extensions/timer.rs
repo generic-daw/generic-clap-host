@@ -1,8 +1,10 @@
 use clack_extensions::timer::{PluginTimer, TimerId};
-use clack_host::prelude::PluginMainThreadHandle;
-use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use clack_host::prelude::*;
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 pub struct Timers {
     #[expect(clippy::struct_field_names)]
