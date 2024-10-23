@@ -45,8 +45,6 @@ impl Timers {
     }
 
     pub fn register_new(&self, interval: Duration) -> TimerId {
-        let interval = interval.max(Duration::from_millis(30));
-
         let latest_id = self.latest_id.get() + 1;
         self.latest_id.set(latest_id);
         let id = TimerId(latest_id);

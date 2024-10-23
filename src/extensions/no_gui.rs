@@ -19,7 +19,8 @@ pub fn run_no_gui(
         let sleep_duration = timers
             .as_ref()
             .and_then(|(timers, _)| Some(timers.next_tick()? - Instant::now()))
-            .unwrap_or(Duration::from_millis(30));
+            .unwrap_or(Duration::from_millis(30))
+            .min(Duration::from_millis(30));
         #[cfg(not(feature = "timer"))]
         let sleep_duration = Duration::from_millis(30);
 
