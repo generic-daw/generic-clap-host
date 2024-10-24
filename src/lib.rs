@@ -6,12 +6,12 @@ use etcetera::{choose_base_strategy, BaseStrategy};
 use extensions::gui::GuiExt;
 #[cfg(not(feature = "gui"))]
 use extensions::no_gui::run_no_gui;
-use host::Host;
-pub use host::HostThreadMessage;
-use main_thread::MainThread;
-pub use main_thread::MainThreadMessage;
+use host::{Host, HostThreadMessage};
+use main_thread::{MainThread, MainThreadMessage};
 use shared::Shared;
 use std::{
+    cell::UnsafeCell,
+    marker::PhantomData,
     path::PathBuf,
     result::Result,
     sync::mpsc::{Receiver, Sender},
@@ -24,6 +24,64 @@ pub(crate) mod host;
 pub(crate) mod main_thread;
 
 mod shared;
+
+#[derive(Debug)]
+pub struct ClapPlugin {
+    sender: Sender<MainThreadMessage>,
+    receiver: Receiver<HostThreadMessage>,
+    _no_sync: PhantomData<UnsafeCell<()>>,
+}
+
+impl ClapPlugin {
+    fn new(sender: Sender<MainThreadMessage>, receiver: Receiver<HostThreadMessage>) -> Self {
+        Self {
+            sender,
+            receiver,
+            _no_sync: PhantomData,
+        }
+    }
+
+    #[must_use]
+    /// # Panics
+    ///
+    /// This  will never panic, since this function blocks until the audio is processed, and you can't send the `ClapPlugin` to another thread.
+    pub fn process_audio(
+        &self,
+        input_audio: Vec<Vec<f32>>,
+        input_audio_ports: AudioPorts,
+        output_audio_ports: AudioPorts,
+        input_events: EventBuffer,
+    ) -> (Vec<Vec<f32>>, EventBuffer) {
+        self.sender
+            .send(MainThreadMessage::ProcessAudio(
+                input_audio,
+                input_audio_ports,
+                output_audio_ports,
+                input_events,
+            ))
+            .unwrap();
+
+        match self.receiver.recv() {
+            Ok(HostThreadMessage::AudioProcessed(output_audio, output_events)) => {
+                (output_audio, output_events)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[must_use]
+    /// # Panics
+    ///
+    /// This  will never panic, since this function blocks until the audio is processed, and you can't send the `ClapPlugin` to another thread.
+    pub fn get_counter(&self) -> u64 {
+        self.sender.send(MainThreadMessage::GetCounter).unwrap();
+
+        match self.receiver.recv() {
+            Ok(HostThreadMessage::Counter(counter)) => counter,
+            _ => unreachable!(),
+        }
+    }
+}
 
 #[must_use]
 pub fn get_installed_plugins() -> Vec<PluginBundle> {
@@ -88,10 +146,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 ///
 /// panics if the plugin doesn't expose a `PluginFactory`
 #[must_use]
-pub fn run(
-    bundle: PluginBundle,
-    config: PluginAudioConfiguration,
-) -> (Sender<MainThreadMessage>, Receiver<HostThreadMessage>) {
+pub fn run(bundle: PluginBundle, config: PluginAudioConfiguration) -> ClapPlugin {
     let (sender_plugin, receiver_plugin) = std::sync::mpsc::channel();
     let (sender_host, receiver_host) = std::sync::mpsc::channel();
 
@@ -148,5 +203,5 @@ pub fn run(
         }
     });
 
-    (sender_plugin, receiver_host)
+    ClapPlugin::new(sender_plugin, receiver_host)
 }

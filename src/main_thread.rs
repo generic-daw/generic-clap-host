@@ -20,7 +20,6 @@ use std::{rc::Rc, time::Duration};
 #[cfg(feature = "log")]
 use tracing::{debug, error, info, warn};
 
-#[expect(missing_debug_implementations)]
 pub enum MainThreadMessage {
     RunOnMainThread,
     #[cfg(feature = "gui")]
