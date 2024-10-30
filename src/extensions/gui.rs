@@ -1,6 +1,10 @@
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui};
+#[cfg(feature = "state")]
+use clack_extensions::state::PluginState;
 use clack_host::prelude::*;
+#[cfg(feature = "state")]
+use std::io::Cursor;
 #[cfg(feature = "timer")]
 use std::time::Instant;
 use std::{
@@ -207,6 +211,33 @@ impl GuiExt {
                     MainThreadMessage::GetCounter => {
                         sender
                             .send(HostThreadMessage::Counter(audio_processor.steady_time()))
+                            .unwrap();
+                    }
+                    #[cfg(feature = "state")]
+                    MainThreadMessage::GetState => {
+                        let state_ext: PluginState = instance
+                            .access_handler_mut(|h| h.shared.state.get())
+                            .unwrap()
+                            .unwrap();
+
+                        let mut state = Vec::new();
+                        state_ext
+                            .save(&mut instance.plugin_handle(), &mut state)
+                            .unwrap();
+
+                        sender.send(HostThreadMessage::State(state)).unwrap();
+                    }
+                    #[cfg(feature = "state")]
+                    MainThreadMessage::SetState(state) => {
+                        let state_ext: PluginState = instance
+                            .access_handler_mut(|h| h.shared.state.get())
+                            .unwrap()
+                            .unwrap();
+
+                        let mut state = Cursor::new(state);
+
+                        state_ext
+                            .load(&mut instance.plugin_handle(), &mut state)
                             .unwrap();
                     }
                 }

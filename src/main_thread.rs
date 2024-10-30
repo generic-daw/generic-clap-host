@@ -1,5 +1,7 @@
 #[cfg(feature = "timer")]
 use crate::extensions::timer::Timers;
+#[cfg(feature = "state")]
+use crate::shared::Shared;
 #[cfg(feature = "audio-ports")]
 use clack_extensions::audio_ports::{HostAudioPortsImpl, RescanType};
 #[cfg(feature = "gui")]
@@ -28,10 +30,15 @@ pub enum MainThreadMessage {
     GuiRequestResized(GuiSize),
     ProcessAudio(Vec<Vec<f32>>, AudioPorts, AudioPorts, EventBuffer),
     GetCounter,
+    #[cfg(feature = "state")]
+    GetState,
+    #[cfg(feature = "state")]
+    SetState(Vec<u8>),
 }
 
-#[derive(Default)]
 pub struct MainThread<'a> {
+    #[cfg(feature = "state")]
+    pub shared: &'a Shared,
     plugin: Option<InitializedPluginHandle<'a>>,
     #[cfg(feature = "gui")]
     pub gui: Option<PluginGui>,
@@ -39,6 +46,26 @@ pub struct MainThread<'a> {
     pub timer_support: Option<PluginTimer>,
     #[cfg(feature = "timer")]
     pub timers: Rc<Timers>,
+    #[cfg(feature = "state")]
+    pub dirty: bool,
+}
+
+impl<'a> MainThread<'a> {
+    pub fn new(#[cfg(feature = "state")] shared: &'a Shared) -> Self {
+        Self {
+            #[cfg(feature = "state")]
+            shared,
+            plugin: None,
+            #[cfg(feature = "gui")]
+            gui: None,
+            #[cfg(feature = "timer")]
+            timer_support: None,
+            #[cfg(feature = "timer")]
+            timers: Rc::default(),
+            #[cfg(feature = "state")]
+            dirty: false,
+        }
+    }
 }
 
 impl<'a> MainThreadHandler<'a> for MainThread<'a> {
@@ -105,7 +132,7 @@ impl HostParamsImplMainThread for MainThread<'_> {
 #[cfg(feature = "state")]
 impl HostStateImpl for MainThread<'_> {
     fn mark_dirty(&mut self) {
-        todo!()
+        self.dirty = true;
     }
 }
 

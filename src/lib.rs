@@ -72,7 +72,7 @@ impl ClapPlugin {
     #[must_use]
     /// # Panics
     ///
-    /// This  will never panic, since this function blocks until the audio is processed, and you can't send the `ClapPlugin` to another thread.
+    /// This will never panic, since this function blocks until the counter is fetched, and you can't send the `ClapPlugin` to another thread.
     pub fn get_counter(&self) -> u64 {
         self.sender.send(MainThreadMessage::GetCounter).unwrap();
 
@@ -80,6 +80,30 @@ impl ClapPlugin {
             Ok(HostThreadMessage::Counter(counter)) => counter,
             _ => unreachable!(),
         }
+    }
+
+    #[cfg(feature = "state")]
+    #[must_use]
+    /// # Panics
+    ///
+    /// This will never panic, since this function blocks until the state is fetched, and you can't send the `ClapPlugin` to another thread.
+    pub fn get_state(&self) -> Vec<u8> {
+        self.sender.send(MainThreadMessage::GetState).unwrap();
+
+        match self.receiver.recv() {
+            Ok(HostThreadMessage::State(state)) => state,
+            _ => unreachable!(),
+        }
+    }
+
+    #[cfg(feature = "state")]
+    /// # Panics
+    ///
+    /// This will never panic
+    pub fn set_state(&self, state: Vec<u8>) {
+        self.sender
+            .send(MainThreadMessage::SetState(state))
+            .unwrap();
     }
 }
 
@@ -157,7 +181,15 @@ pub fn run(bundle: PluginBundle, config: PluginAudioConfiguration) -> ClapPlugin
         let plugin_descriptor = factory.plugin_descriptors().next().unwrap();
         let mut instance = PluginInstance::<Host>::new(
             |()| Shared::new(sender_plugin_clone),
-            |_| MainThread::default(),
+            |shared| {
+                #[cfg(not(feature = "state"))]
+                let _ = shared;
+
+                MainThread::new(
+                    #[cfg(feature = "state")]
+                    shared,
+                )
+            },
             &bundle,
             plugin_descriptor.id().unwrap(),
             &HostInfo::new("", "", "", "").unwrap(),

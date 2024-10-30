@@ -19,6 +19,8 @@ pub struct Host;
 pub enum HostThreadMessage {
     AudioProcessed(Vec<Vec<f32>>, EventBuffer),
     Counter(u64),
+    #[cfg(feature = "state")]
+    State(Vec<u8>),
 }
 
 impl HostHandlers for Host {
