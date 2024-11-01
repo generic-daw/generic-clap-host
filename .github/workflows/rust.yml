@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cargo install cargo-hack
-      - run: cargo hack clippy --feature-powerset --no-dev-deps -- -D warnings
+      - run: cargo hack clippy --feature-powerset --no-dev-deps --exclude-features default -- -D warnings
   fmt:
     runs-on: ubuntu-latest
     steps:

@@ -1,5 +1,7 @@
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
-use clack_extensions::gui::{GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui};
+use clack_extensions::gui::{
+    GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui, Window as ClapWindow,
+};
 #[cfg(feature = "state")]
 use clack_extensions::state::PluginState;
 use clack_host::prelude::*;
@@ -8,10 +10,15 @@ use std::io::Cursor;
 #[cfg(feature = "timer")]
 use std::time::Instant;
 use std::{
+    error::Error,
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
-use winit::dpi::{LogicalSize, PhysicalSize, Size};
+use winit::{
+    dpi::{LogicalSize, PhysicalSize, Size},
+    event_loop::EventLoop,
+    window::Window,
+};
 
 pub struct GuiExt {
     plugin_gui: PluginGui,
@@ -91,6 +98,51 @@ impl GuiExt {
         self.plugin_gui.show(plugin)?;
 
         Ok(())
+    }
+
+    #[expect(dead_code)]
+    pub fn open_embedded(
+        &mut self,
+        plugin: &mut PluginMainThreadHandle<'_>,
+        event_loop: &EventLoop<()>,
+    ) -> Result<Window, Box<dyn Error>> {
+        let Some(configuration) = self.configuration else {
+            panic!("Called open_embedded on incompatible plugin")
+        };
+        assert!(
+            !configuration.is_floating,
+            "Called open_embedded on incompatible plugin"
+        );
+
+        self.plugin_gui.create(plugin, configuration)?;
+
+        let initial_size = self.plugin_gui.get_size(plugin).unwrap_or(GuiSize {
+            width: 640,
+            height: 480,
+        });
+
+        self.is_resizeable = self.plugin_gui.can_resize(plugin);
+
+        #[expect(deprecated)] // TODO: remove this
+        let window = event_loop.create_window(
+            Window::default_attributes()
+                .with_title("Clack CPAL plugin!")
+                .with_inner_size(PhysicalSize {
+                    height: initial_size.height,
+                    width: initial_size.width,
+                })
+                .with_resizable(self.is_resizeable),
+        )?;
+
+        unsafe {
+            self.plugin_gui
+                .set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
+        }
+
+        let _ = self.plugin_gui.show(plugin);
+        self.is_open = true;
+
+        Ok(window)
     }
 
     pub fn resize(

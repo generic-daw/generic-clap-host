@@ -22,7 +22,6 @@ pub(crate) mod audio_processor;
 mod extensions;
 pub(crate) mod host;
 pub(crate) mod main_thread;
-
 mod shared;
 
 #[derive(Debug)]
@@ -41,10 +40,10 @@ impl ClapPlugin {
         }
     }
 
-    #[must_use]
     /// # Panics
     ///
     /// This will never panic, since this function blocks until the audio is processed, and you can't share the `ClapPlugin` between threads.
+    #[must_use]
     pub fn process_audio(
         &self,
         input_audio: Vec<Vec<f32>>,
@@ -69,10 +68,10 @@ impl ClapPlugin {
         }
     }
 
-    #[must_use]
     /// # Panics
     ///
     /// This will never panic, since this function blocks until the counter is fetched, and you can't share the `ClapPlugin` between threads.
+    #[must_use]
     pub fn get_counter(&self) -> u64 {
         self.sender.send(MainThreadMessage::GetCounter).unwrap();
 
@@ -82,11 +81,11 @@ impl ClapPlugin {
         }
     }
 
-    #[cfg(feature = "state")]
-    #[must_use]
     /// # Panics
     ///
     /// This will never panic, since this function blocks until the state is fetched, and you can't share the `ClapPlugin` between threads.
+    #[must_use]
+    #[cfg(feature = "state")]
     pub fn get_state(&self) -> Vec<u8> {
         self.sender.send(MainThreadMessage::GetState).unwrap();
 
@@ -96,10 +95,10 @@ impl ClapPlugin {
         }
     }
 
-    #[cfg(feature = "state")]
     /// # Panics
     ///
     /// This will never panic
+    #[cfg(feature = "state")]
     pub fn set_state(&self, state: Vec<u8>) {
         self.sender
             .send(MainThreadMessage::SetState(state))
