@@ -44,7 +44,7 @@ impl ClapPlugin {
     #[must_use]
     /// # Panics
     ///
-    /// This  will never panic, since this function blocks until the audio is processed, and you can't send the `ClapPlugin` to another thread.
+    /// This will never panic, since this function blocks until the audio is processed, and you can't share the `ClapPlugin` between threads.
     pub fn process_audio(
         &self,
         input_audio: Vec<Vec<f32>>,
@@ -72,7 +72,7 @@ impl ClapPlugin {
     #[must_use]
     /// # Panics
     ///
-    /// This will never panic, since this function blocks until the counter is fetched, and you can't send the `ClapPlugin` to another thread.
+    /// This will never panic, since this function blocks until the counter is fetched, and you can't share the `ClapPlugin` between threads.
     pub fn get_counter(&self) -> u64 {
         self.sender.send(MainThreadMessage::GetCounter).unwrap();
 
@@ -86,7 +86,7 @@ impl ClapPlugin {
     #[must_use]
     /// # Panics
     ///
-    /// This will never panic, since this function blocks until the state is fetched, and you can't send the `ClapPlugin` to another thread.
+    /// This will never panic, since this function blocks until the state is fetched, and you can't share the `ClapPlugin` between threads.
     pub fn get_state(&self) -> Vec<u8> {
         self.sender.send(MainThreadMessage::GetState).unwrap();
 
