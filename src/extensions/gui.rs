@@ -1,13 +1,18 @@
+#[cfg(feature = "timer")]
+use crate::extensions::timer::Timers;
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{
     GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui, Window as ClapWindow,
 };
 #[cfg(feature = "state")]
 use clack_extensions::state::PluginState;
+#[cfg(feature = "timer")]
+use clack_extensions::timer::PluginTimer;
 use clack_host::prelude::*;
 #[cfg(feature = "state")]
 use std::io::Cursor;
 #[cfg(feature = "timer")]
+use std::rc::Rc;
 use std::time::Instant;
 use std::{
     error::Error,
@@ -16,7 +21,8 @@ use std::{
 };
 use winit::{
     dpi::{LogicalSize, PhysicalSize, Size},
-    event_loop::EventLoop,
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
 
@@ -100,7 +106,6 @@ impl GuiExt {
         Ok(())
     }
 
-    #[expect(dead_code)]
     pub fn open_embedded(
         &mut self,
         plugin: &mut PluginMainThreadHandle<'_>,
@@ -186,15 +191,100 @@ impl GuiExt {
         }
     }
 
-    #[expect(clippy::needless_pass_by_ref_mut)]
     pub fn run_gui_embedded(
         &mut self,
-        mut _instance: PluginInstance<Host>,
-        _sender: &Sender<HostThreadMessage>,
-        _receiver: &Receiver<MainThreadMessage>,
-        _audio_processor: &mut AudioProcessor,
+        mut instance: PluginInstance<Host>,
+        sender: &Sender<HostThreadMessage>,
+        receiver: &Receiver<MainThreadMessage>,
+        audio_processor: &mut AudioProcessor,
     ) {
-        todo!()
+        let event_loop = EventLoop::new().unwrap();
+
+        let mut window = Some(
+            self.open_embedded(&mut instance.plugin_handle(), &event_loop)
+                .unwrap(),
+        );
+
+        let uses_logical_pixels = self.configuration.unwrap().api_type.uses_logical_size();
+
+        #[cfg(feature = "timer")]
+        let timers =
+            instance.access_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
+
+        #[expect(deprecated)]
+        event_loop
+            .run(move |event, target| {
+                #[cfg(feature = "timer")]
+                if let Some((timers, timer_ext)) = &timers {
+                    timers.tick_timers(timer_ext, &mut instance.plugin_handle());
+                }
+
+                while let Ok(message) = receiver.try_recv() {
+                    match message {
+                        MainThreadMessage::GuiRequestResized(new_size) => {
+                            let new_size: Size = if uses_logical_pixels {
+                                LogicalSize {
+                                    width: new_size.width,
+                                    height: new_size.height,
+                                }
+                                .into()
+                            } else {
+                                PhysicalSize {
+                                    width: new_size.width,
+                                    height: new_size.height,
+                                }
+                                .into()
+                            };
+
+                            let _ = window.as_mut().unwrap().request_inner_size(new_size);
+                        }
+                        _ => Self::do_event(&mut instance, sender, message, audio_processor),
+                    }
+                }
+
+                match event {
+                    Event::WindowEvent { event, .. } => match event {
+                        WindowEvent::CloseRequested => {
+                            self.plugin_gui.destroy(&mut instance.plugin_handle());
+                            window.take();
+                            return;
+                        }
+                        WindowEvent::Destroyed => {
+                            target.exit();
+                            return;
+                        }
+                        WindowEvent::Resized(size) => {
+                            let window = window.as_ref().unwrap();
+                            let scale_factor = window.scale_factor();
+
+                            let actual_size = self.resize(
+                                &mut instance.plugin_handle(),
+                                Size::Physical(size),
+                                scale_factor,
+                            );
+
+                            if actual_size != size.into() {
+                                let _ = window.request_inner_size(actual_size);
+                            }
+                        }
+                        _ => {}
+                    },
+                    Event::LoopExiting => {
+                        self.plugin_gui.destroy(&mut instance.plugin_handle());
+                    }
+                    _ => {}
+                }
+
+                #[cfg(feature = "timer")]
+                let sleep_duration = Self::get_sleep_duration(&timers);
+                #[cfg(not(feature = "timer"))]
+                let sleep_duration = Duration::from_millis(30);
+
+                target.set_control_flow(ControlFlow::WaitUntil(Instant::now() + sleep_duration));
+            })
+            .unwrap();
+
+        std::thread::sleep(Duration::from_millis(100));
     }
 
     pub fn run_gui_floating(
@@ -211,89 +301,105 @@ impl GuiExt {
 
         loop {
             #[cfg(feature = "timer")]
-            let sleep_duration = timers
-                .as_ref()
-                .and_then(|(timers, _)| Some(timers.next_tick()? - Instant::now()))
-                .unwrap_or(Duration::from_millis(30))
-                .min(Duration::from_millis(30));
-            #[cfg(not(feature = "timer"))]
-            let sleep_duration = Duration::from_millis(30);
-
-            std::thread::sleep(sleep_duration);
-
-            #[cfg(feature = "timer")]
             if let Some((timers, timer_ext)) = &timers {
                 timers.tick_timers(timer_ext, &mut instance.plugin_handle());
             }
-
             while let Ok(message) = receiver.try_recv() {
                 match message {
-                    MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
                     MainThreadMessage::GuiClosed { .. } => {
                         self.destroy(&mut instance.plugin_handle());
                         return;
                     }
-                    MainThreadMessage::GuiRequestResized(gui_size) => {
+                    MainThreadMessage::GuiRequestResized(new_size) => {
                         self.resize(
                             &mut instance.plugin_handle(),
-                            self.gui_size_to_winit_size(gui_size),
+                            self.gui_size_to_winit_size(new_size),
                             1.0f64,
                         );
                     }
-                    MainThreadMessage::ProcessAudio(
-                        mut input_buffers,
-                        mut input_audio_ports,
-                        mut output_audio_ports,
-                        input_events,
-                    ) => {
-                        let (output_buffers, output_events) = audio_processor.process(
-                            &mut input_buffers,
-                            &input_events,
-                            &mut input_audio_ports,
-                            &mut output_audio_ports,
-                        );
-
-                        sender
-                            .send(HostThreadMessage::AudioProcessed(
-                                output_buffers,
-                                output_events,
-                            ))
-                            .unwrap();
-                    }
-                    MainThreadMessage::GetCounter => {
-                        sender
-                            .send(HostThreadMessage::Counter(audio_processor.steady_time()))
-                            .unwrap();
-                    }
-                    #[cfg(feature = "state")]
-                    MainThreadMessage::GetState => {
-                        let state_ext: PluginState = instance
-                            .access_handler_mut(|h| h.shared.state.get())
-                            .unwrap()
-                            .unwrap();
-
-                        let mut state = Vec::new();
-                        state_ext
-                            .save(&mut instance.plugin_handle(), &mut state)
-                            .unwrap();
-
-                        sender.send(HostThreadMessage::State(state)).unwrap();
-                    }
-                    #[cfg(feature = "state")]
-                    MainThreadMessage::SetState(state) => {
-                        let state_ext: PluginState = instance
-                            .access_handler_mut(|h| h.shared.state.get())
-                            .unwrap()
-                            .unwrap();
-
-                        let mut state = Cursor::new(state);
-
-                        state_ext
-                            .load(&mut instance.plugin_handle(), &mut state)
-                            .unwrap();
-                    }
+                    _ => Self::do_event(&mut instance, sender, message, audio_processor),
                 }
             }
+
+            #[cfg(feature = "timer")]
+            let sleep_duration = Self::get_sleep_duration(&timers);
+            #[cfg(not(feature = "timer"))]
+            let sleep_duration = Duration::from_millis(30);
+
+            std::thread::sleep(sleep_duration);
         }
+    }
+
+    fn do_event(
+        instance: &mut PluginInstance<Host>,
+        sender: &Sender<HostThreadMessage>,
+        message: MainThreadMessage,
+        audio_processor: &mut AudioProcessor,
+    ) {
+        match message {
+            MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+            MainThreadMessage::ProcessAudio(
+                mut input_buffers,
+                mut input_audio_ports,
+                mut output_audio_ports,
+                input_events,
+            ) => {
+                let (output_buffers, output_events) = audio_processor.process(
+                    &mut input_buffers,
+                    &input_events,
+                    &mut input_audio_ports,
+                    &mut output_audio_ports,
+                );
+
+                sender
+                    .send(HostThreadMessage::AudioProcessed(
+                        output_buffers,
+                        output_events,
+                    ))
+                    .unwrap();
+            }
+            MainThreadMessage::GetCounter => {
+                sender
+                    .send(HostThreadMessage::Counter(audio_processor.steady_time()))
+                    .unwrap();
+            }
+            #[cfg(feature = "state")]
+            MainThreadMessage::GetState => {
+                let state_ext: PluginState = instance
+                    .access_handler_mut(|h| h.shared.state.get())
+                    .unwrap()
+                    .unwrap();
+
+                let mut state = Vec::new();
+                state_ext
+                    .save(&mut instance.plugin_handle(), &mut state)
+                    .unwrap();
+
+                sender.send(HostThreadMessage::State(state)).unwrap();
+            }
+            #[cfg(feature = "state")]
+            MainThreadMessage::SetState(state) => {
+                let state_ext: PluginState = instance
+                    .access_handler_mut(|h| h.shared.state.get())
+                    .unwrap()
+                    .unwrap();
+
+                let mut state = Cursor::new(state);
+
+                state_ext
+                    .load(&mut instance.plugin_handle(), &mut state)
+                    .unwrap();
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[cfg(feature = "timer")]
+    fn get_sleep_duration(timers: &Option<(Rc<Timers>, PluginTimer)>) -> Duration {
+        timers
+            .as_ref()
+            .and_then(|(timers, _)| Some(timers.next_tick()? - Instant::now()))
+            .unwrap_or(Duration::from_millis(30))
+            .min(Duration::from_millis(30))
     }
 }
