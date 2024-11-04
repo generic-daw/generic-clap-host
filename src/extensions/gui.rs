@@ -2,7 +2,7 @@
 use crate::extensions::timer::Timers;
 use crate::{AudioProcessor, Host, HostThreadMessage, MainThreadMessage};
 use clack_extensions::gui::{
-    GuiApiType, GuiConfiguration, GuiError, GuiSize, PluginGui, Window as ClapWindow,
+    GuiApiType, GuiConfiguration, GuiSize, PluginGui, Window as ClapWindow,
 };
 #[cfg(feature = "state")]
 use clack_extensions::state::PluginState;
@@ -15,7 +15,6 @@ use std::io::Cursor;
 use std::rc::Rc;
 use std::time::Instant;
 use std::{
-    error::Error,
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
@@ -90,7 +89,7 @@ impl GuiExt {
             .map(|GuiConfiguration { is_floating, .. }| is_floating)
     }
 
-    pub fn open_floating(&self, plugin: &mut PluginMainThreadHandle<'_>) -> Result<(), GuiError> {
+    pub fn open_floating(&self, plugin: &mut PluginMainThreadHandle<'_>) {
         let Some(configuration) = self.configuration else {
             panic!("Called open_floating on incompatible plugin")
         };
@@ -99,18 +98,16 @@ impl GuiExt {
             "Called open_floating on incompatible plugin"
         );
 
-        self.plugin_gui.create(plugin, configuration)?;
+        self.plugin_gui.create(plugin, configuration).unwrap();
         self.plugin_gui.suggest_title(plugin, c"");
-        self.plugin_gui.show(plugin)?;
-
-        Ok(())
+        self.plugin_gui.show(plugin).unwrap();
     }
 
     pub fn open_embedded(
         &mut self,
         plugin: &mut PluginMainThreadHandle<'_>,
         event_loop: &EventLoop<()>,
-    ) -> Result<Window, Box<dyn Error>> {
+    ) -> Window {
         let Some(configuration) = self.configuration else {
             panic!("Called open_embedded on incompatible plugin")
         };
@@ -119,7 +116,7 @@ impl GuiExt {
             "Called open_embedded on incompatible plugin"
         );
 
-        self.plugin_gui.create(plugin, configuration)?;
+        self.plugin_gui.create(plugin, configuration).unwrap();
 
         let initial_size = self.plugin_gui.get_size(plugin).unwrap_or(GuiSize {
             width: 640,
@@ -129,25 +126,28 @@ impl GuiExt {
         self.is_resizeable = self.plugin_gui.can_resize(plugin);
 
         #[expect(deprecated)] // TODO: remove this
-        let window = event_loop.create_window(
-            Window::default_attributes()
-                .with_title("Clack CPAL plugin!")
-                .with_inner_size(PhysicalSize {
-                    height: initial_size.height,
-                    width: initial_size.width,
-                })
-                .with_resizable(self.is_resizeable),
-        )?;
+        let window = event_loop
+            .create_window(
+                Window::default_attributes()
+                    .with_title("Clack CPAL plugin!")
+                    .with_inner_size(PhysicalSize {
+                        height: initial_size.height,
+                        width: initial_size.width,
+                    })
+                    .with_resizable(self.is_resizeable),
+            )
+            .unwrap();
 
         unsafe {
             self.plugin_gui
-                .set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
+                .set_parent(plugin, ClapWindow::from_window(&window).unwrap())
+                .unwrap();
         }
 
         let _ = self.plugin_gui.show(plugin);
         self.is_open = true;
 
-        Ok(window)
+        window
     }
 
     pub fn resize(
@@ -200,10 +200,7 @@ impl GuiExt {
     ) {
         let event_loop = EventLoop::new().unwrap();
 
-        let mut window = Some(
-            self.open_embedded(&mut instance.plugin_handle(), &event_loop)
-                .unwrap(),
-        );
+        let mut window = Some(self.open_embedded(&mut instance.plugin_handle(), &event_loop));
 
         let uses_logical_pixels = self.configuration.unwrap().api_type.uses_logical_size();
 
@@ -294,7 +291,7 @@ impl GuiExt {
         receiver: &Receiver<MainThreadMessage>,
         audio_processor: &mut AudioProcessor,
     ) {
-        self.open_floating(&mut instance.plugin_handle()).unwrap();
+        self.open_floating(&mut instance.plugin_handle());
         #[cfg(feature = "timer")]
         let timers =
             instance.access_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
