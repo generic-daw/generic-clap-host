@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo install cargo-hack
+      - uses: taiki-e/install-action@cargo-hack
       - run: cargo hack clippy --feature-powerset --no-dev-deps --exclude-features default -- -D warnings
   fmt:
     runs-on: ubuntu-latest
