@@ -198,6 +198,11 @@ impl GuiExt {
         receiver: &Receiver<MainThreadMessage>,
         audio_processor: &mut AudioProcessor,
     ) {
+        #[cfg(target_os = "linux")]
+        unsafe {
+            std::env::remove_var("WAYLAND_DISPLAY");
+        }
+
         let event_loop = EventLoop::new().unwrap();
 
         let mut window = Some(self.open_embedded(&mut instance.plugin_handle(), &event_loop));
