@@ -206,7 +206,7 @@ pub fn run(bundle: PluginBundle, config: PluginAudioConfiguration) -> ClapPlugin
             instance,
             &sender_host,
             &receiver_plugin,
-            &mut AudioProcessor::new(audio_processor, config),
+            &mut AudioProcessor::new(audio_processor),
         );
 
         #[cfg(feature = "gui")]
@@ -221,14 +221,14 @@ pub fn run(bundle: PluginBundle, config: PluginAudioConfiguration) -> ClapPlugin
                     instance,
                     &sender_host,
                     &receiver_plugin,
-                    &mut AudioProcessor::new(audio_processor, config),
+                    &mut AudioProcessor::new(audio_processor),
                 );
             } else {
                 gui.run_gui_embedded(
                     instance,
                     &sender_host,
                     &receiver_plugin,
-                    &mut AudioProcessor::new(audio_processor, config),
+                    &mut AudioProcessor::new(audio_processor),
                 );
             }
         }

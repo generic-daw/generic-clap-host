@@ -3,20 +3,14 @@ use clack_host::{prelude::*, process::StartedPluginAudioProcessor};
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 
 pub struct AudioProcessor {
-    #[expect(clippy::struct_field_names)]
     started_audio_processor: Option<StartedPluginAudioProcessor<Host>>,
-    config: PluginAudioConfiguration,
     steady_time: AtomicU64,
 }
 
 impl AudioProcessor {
-    pub fn new(
-        audio_processor: StartedPluginAudioProcessor<Host>,
-        config: PluginAudioConfiguration,
-    ) -> Self {
+    pub fn new(audio_processor: StartedPluginAudioProcessor<Host>) -> Self {
         Self {
             started_audio_processor: Some(audio_processor),
-            config,
             steady_time: AtomicU64::new(0),
         }
     }
@@ -32,14 +26,6 @@ impl AudioProcessor {
         input_ports: &mut AudioPorts,
         output_ports: &mut AudioPorts,
     ) -> (Vec<Vec<f32>>, EventBuffer) {
-        assert_eq!(input_audio_buffers[0].len(), input_audio_buffers[1].len());
-        assert!(
-            input_audio_buffers[0].len() < usize::try_from(self.config.max_frames_count).unwrap()
-        );
-        assert!(
-            input_audio_buffers[0].len() > usize::try_from(self.config.min_frames_count).unwrap()
-        );
-
         let mut output_audio_buffers = input_audio_buffers.clone();
 
         let input_audio = input_ports.with_input_buffers([AudioPortBuffer {
