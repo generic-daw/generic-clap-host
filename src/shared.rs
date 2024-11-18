@@ -16,7 +16,7 @@ pub struct Shared {
     pub state: OnceLock<Option<PluginState>>,
 }
 
-impl<'a> SharedHandler<'a> for Shared {
+impl SharedHandler<'_> for Shared {
     fn request_process(&self) {
         // we never pause
     }
@@ -32,7 +32,7 @@ impl<'a> SharedHandler<'a> for Shared {
     }
 
     #[cfg(feature = "state")]
-    fn initializing(&self, instance: InitializingPluginHandle<'a>) {
+    fn initializing(&self, instance: InitializingPluginHandle<'_>) {
         #[cfg(feature = "state")]
         self.state.set(instance.get_extension()).ok().unwrap();
     }
