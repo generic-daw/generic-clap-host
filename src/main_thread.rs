@@ -50,10 +50,25 @@ pub struct MainThread<'a> {
     pub dirty: bool,
 }
 
-impl<'a> MainThread<'a> {
-    pub fn new(#[cfg(feature = "state")] shared: &'a Shared) -> Self {
+#[cfg(not(feature = "state"))]
+impl MainThread<'_> {
+    pub fn new() -> Self {
         Self {
-            #[cfg(feature = "state")]
+            plugin: None,
+            #[cfg(feature = "gui")]
+            gui: None,
+            #[cfg(feature = "timer")]
+            timer_support: None,
+            #[cfg(feature = "timer")]
+            timers: Rc::default(),
+        }
+    }
+}
+
+#[cfg(feature = "state")]
+impl<'a> MainThread<'a> {
+    pub fn new(shared: &'a Shared) -> Self {
+        Self {
             shared,
             plugin: None,
             #[cfg(feature = "gui")]
@@ -62,7 +77,6 @@ impl<'a> MainThread<'a> {
             timer_support: None,
             #[cfg(feature = "timer")]
             timers: Rc::default(),
-            #[cfg(feature = "state")]
             dirty: false,
         }
     }
@@ -137,7 +151,7 @@ impl HostStateImpl for MainThread<'_> {
 }
 
 #[cfg(feature = "timer")]
-impl<'a> HostTimerImpl for MainThread<'a> {
+impl HostTimerImpl for MainThread<'_> {
     fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
         Ok(self
             .timers

@@ -1,7 +1,7 @@
 use audio_processor::AudioProcessor;
 pub use clack_host;
 use clack_host::prelude::*;
-use etcetera::{choose_base_strategy, BaseStrategy};
+use etcetera::{choose_base_strategy, BaseStrategy as _};
 #[cfg(feature = "gui")]
 use extensions::gui::GuiExt;
 #[cfg(not(feature = "gui"))]

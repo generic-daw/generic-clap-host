@@ -278,7 +278,7 @@ impl GuiExt {
                 }
 
                 #[cfg(feature = "timer")]
-                let sleep_duration = Self::get_sleep_duration(&timers);
+                let sleep_duration = Self::get_sleep_duration(timers.as_ref());
                 #[cfg(not(feature = "timer"))]
                 let sleep_duration = Duration::from_millis(30);
 
@@ -324,7 +324,7 @@ impl GuiExt {
             }
 
             #[cfg(feature = "timer")]
-            let sleep_duration = Self::get_sleep_duration(&timers);
+            let sleep_duration = Self::get_sleep_duration(timers.as_ref());
             #[cfg(not(feature = "timer"))]
             let sleep_duration = Duration::from_millis(30);
 
@@ -397,7 +397,7 @@ impl GuiExt {
     }
 
     #[cfg(feature = "timer")]
-    fn get_sleep_duration(timers: &Option<(Rc<Timers>, PluginTimer)>) -> Duration {
+    fn get_sleep_duration(timers: Option<&(Rc<Timers>, PluginTimer)>) -> Duration {
         timers
             .as_ref()
             .and_then(|(timers, _)| Some(timers.next_tick()? - Instant::now()))
